@@ -6,6 +6,7 @@ const table = require("console.table");
 const arrayRoles = [];
 const arrayManagers = [];
 const arrayDepartments = [];
+const arrayEmployees = [];
 
 // mysql connection //
 var connection = mysql.createConnection({
@@ -18,11 +19,18 @@ var connection = mysql.createConnection({
 
  connection.connect((err) => {
    if (err) throw err;
-   start();
+   employeeTracker();
  });
  
 // Functions //
 employeeTracker = function() {
+
+   //Array Calls //
+   arrayEmployeesFunc();
+   arrayManagersFunc();
+   arrayRolesFunc();
+   arrayDepartmentsFunc();
+
    inquirer.prompt({
       name: "greeting",
       type: "list",
@@ -64,11 +72,53 @@ employeeTracker = function() {
             break;
          }
          case "EXIT": {
-            console.log ("Have a nice day");
+            console.log ("\n Have a nice day \n");
+            connection.end();
             break;
          }
       }
    })
+}
+// Array Functions //
+function arrayManagersFunc() {
+   connection.query("SELECT first_name, last_name FROM employees WHERE manager_id IS NULL",
+   (err, answer) => {
+       if (err) throw err;
+       for (var i = 0; i < answer.length; i++) {
+           arrayManagers.push(`${answer[i].first_name} ${answer[i].last_name}`);
+         }
+   })
+   return arrayManagers;
+}
+function arrayRolesFunc() {
+   connection.query("SELECT * FROM roles",
+   (err, answer) => {
+       if (err) throw err;
+       for (var i = 0; i < answer.length; i++) {
+           arrayRoles.push(answer[i].title);
+         }
+   })
+   return arrayRoles;
+}
+function arrayEmployeesFunc() {
+   connection.query("SELECT first_name, last_name FROM employees",
+   (err, answer) => {
+       if (err) throw err;
+       for (var i = 0; i < answer.length; i++) {
+           arrayEmployees.push(answer[i].title);
+         }
+   })
+   return arrayEmployees;
+}
+function arrayDepartmentsFunc() {
+   connection.query("SELECT * FROM departments",
+   (err, answer) => {
+       if (err) throw err;
+       for (var i = 0; i < answer.length; i++) {
+           arrayDepartments.push(answer[i].title);
+         }
+   })
+   return arrayDepartments;
 }
 
 // Adder functions //
@@ -87,7 +137,8 @@ function addEmployee() {
       {
          name: "employeeRole",
          message: "What is your employee's role?",
-         type: "string"
+         type: "list",
+         choices: arrayRoles
       },
       {
          name: "employeeManager",
@@ -118,7 +169,7 @@ function managerPrompt() {
    }])
 }
 function addRole() {
-   connection.query( `SELECT role.title AS Title, role.salary AS Salary FROM role`, (err, results) => {
+   connection.query( `SELECT roles.title AS Title, roles.salary AS Salary FROM roles`, (err, results) => {
         if (err) throw err;
    inquirer.prompt([
       {
@@ -139,7 +190,7 @@ function addRole() {
       }
    ]).then(function (answers) {
       connection.query(
-         "INSERT INTO role SET ?",
+         "INSERT INTO roles SET ?",
          {
          title: answers.roleTitle,
          salary: answers.salary,
@@ -155,7 +206,7 @@ function addRole() {
    })
 }
 function addDepartment() {
-   connection.query( `SELECT * FROM employeeTracker.department`, (err, results) => {
+   connection.query( `SELECT departments.name FROM employeeTracker.departments`, (err, results) => {
         if (err) throw err;
    inquirer.prompt([
       {
@@ -165,9 +216,9 @@ function addDepartment() {
       }
    ]).then(function (answers) {
       connection.query(
-         "INSERT INTO department SET ?",
+         "INSERT INTO departments SET ?",
          {
-        name: annswer.newDepartmemt,
+        department: answers.newDepartmemt,
          },
          (err) => {
          if (err) throw err;
@@ -182,7 +233,7 @@ function addDepartment() {
 
 // Viewing Functions //
 function viewEmployees() {
-   connection.query(`SELECT employee.first_name AS FirstName, employee.last_name AS LastName, role.title AS Role, department.name AS Department, CONCAT(e.first_name, ' ' ,e.last_name) AS Manager FROM employee INNER JOIN role ON role.id = employee.role_id INNER JOIN department ON department.id = role.department_id LEFT JOIN employee e on employee.manager_id = e.id;`,
+   connection.query(`SELECT employees.first_name AS FirstName, employees.last_name AS LastName, roles.title AS Role, departments.name AS Department, CONCAT(e.first_name, ' ' ,e.last_name) AS Manager FROM employees INNER JOIN roles ON roles.id = employees.role_id INNER JOIN departments ON departments.id = roles.department_id LEFT JOIN employees e on employees.manager_id = e.id;`,
     (err, answer) => {
         if (err) throw err;
         console.table(answer);
@@ -190,7 +241,7 @@ function viewEmployees() {
         });
 }
 function viewRoles() {
-   connection.query(`SELECT employee.first_name AS FirstName, employee.last_name AS LastName, role.title AS Role FROM employee JOIN role ON employee.role_id = role.id;`,
+   connection.query(`SELECT employees.first_name AS FirstName, employees.last_name AS LastName, roles.title AS Role FROM employees JOIN roles ON employees.role_id = roles.id;`,
    (err, answer) => {
        if (err) throw err;
        console.table(answer);
@@ -198,7 +249,7 @@ function viewRoles() {
        });
 }
 function viewDepartments() {
-   connection.query(`SELECT employee.first_name AS FirstName, employee.last_name AS LastName, department.name AS Department FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id ORDER BY employee.id;`,
+   connection.query(`SELECT employees.first_name AS FirstName, employees.last_name AS LastName, departments.department AS Department FROM employees JOIN roles ON employees.role_id = roles.id JOIN departments ON roles.department_id = departments.id ORDER BY employees.id;`,
    (err, answer) => {
        if (err) throw err;
        console.table(answer);
@@ -243,14 +294,11 @@ function updateRole() {
                   ],
                   function(err) {
                      if (err) throw err;
-                     console.log("\n Employee role updated! \n");
-                     start();
+                     console.log("Employee role updated!");
+                     employeeTracker();
                   }
                )
            })
        })
    })
 }
-
-// Call //
-employeeTracker();
