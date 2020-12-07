@@ -3,6 +3,9 @@
    "version": "1.0.0",
    "description": "tracks employees using node, mysql,console.table",
    "main": "app.js",
+   "scripts": {
+      "start": "node app.js"
+   },
    "dependencies": {
       "console.table": "^0.10.0",
       "inquirer": "^6.2.1",
